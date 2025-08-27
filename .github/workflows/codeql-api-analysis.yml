@@ -1,0 +1,53 @@
+name: CodeQL API Security Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_file:
+        description: 'Target file to analyze'
+        required: false
+        type: string
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  analyze:
+    name: Analyze API Security
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java', 'python', 'javascript', 'cpp', 'csharp' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+    - name: Upload SARIF results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: codeql-results-${{ matrix.language }}
+        path: /home/runner/work/_temp/codeql_databases/*/results/*.sarif
+        retention-days: 7
