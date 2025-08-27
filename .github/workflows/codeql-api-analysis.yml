@@ -14,7 +14,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze API Security
+    name: Analyze
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -24,7 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'java', 'python', 'javascript', 'cpp', 'csharp' ]
+        # Only Java for now since your test file is Java
+        # Add more languages as needed: 'javascript', 'python', 'cpp', 'csharp', 'go', 'ruby'
+        language: [ 'java' ]
 
     steps:
     - name: Checkout repository
@@ -34,7 +36,16 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: security-and-quality
+        # Use security-extended for more thorough analysis
+        queries: security-extended,security-and-quality
+
+    # Setup Java for Java projects
+    - name: Setup Java
+      if: matrix.language == 'java'
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: Autobuild
       uses: github/codeql-action/autobuild@v3
@@ -43,11 +54,13 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
-
-    - name: Upload SARIF results
+        upload: true
+        
+    # Optional: Upload SARIF as artifact
+    - name: Upload SARIF
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: codeql-results-${{ matrix.language }}
-        path: /home/runner/work/_temp/codeql_databases/*/results/*.sarif
-        retention-days: 7
+        name: sarif-results-${{ matrix.language }}
+        path: ../results/*.sarif
+        retention-days: 5
